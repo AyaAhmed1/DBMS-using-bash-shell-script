@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo "Welcome in DBMS"
+echo "Authors: Aya Ahmed - Dina Ahmed - Mai Ahmed" 
