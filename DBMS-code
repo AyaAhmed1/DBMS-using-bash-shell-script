@@ -133,6 +133,11 @@ if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
     null=$(echo $many | awk 'BEGIN {FS="," } { print $4 }')
     defvalue=$(echo $many | awk 'BEGIN {FS="," } { print $5 }')
     fi
+ if [[ $colName == '' ]]
+     then 
+      yad --text "column name must have a value" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+  tableSelection
+   fi
 
      if [[ $colType == "Integer" ]]; then
         if [[ $defvalue =~ ^[0-9]*$ ]]; then
@@ -170,6 +175,7 @@ if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
            yad --text "Error Creating Table" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
            createTable
 
+        
          fi
 fi
 }
