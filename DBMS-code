@@ -36,7 +36,7 @@ function tableSelection {
       --button="gtk-ok:0" \
      --button="gtk-close:1" \
       --entry-text \
-      "Create table" "Insert into table" "Select all from table"  "Delete From Table" "Update table" "Alter Table" "Sort Table" "Main Menu" "Exit")
+      "Create table" "Insert into table" "Select all from table"  "Delete From Table" "Update table" "Alter Table" "Sort Table" "Display Table Description" "Drop Table" "Main Menu" "Exit")
       ret=$?
       [[ $ret -eq 1 ]] && exit 0
       if [[ $ret -eq 2 ]]; then
@@ -50,8 +50,11 @@ function tableSelection {
           Delete*)deleteFromTable ;;
           Update*) updateTable ;;
           Alter*) alterTable ;;
+          Display*) displayTable ;;
+          Drop*)  dropTable ;;
           Main*) cd ../.. 2>>./.error.log; Main ;;
           Sort*) sortTable ;;
+
           Exit*) exit 1 ;;
           *) exit 1 ;;
       esac
@@ -376,7 +379,7 @@ field=$(echo $options | awk 'BEGIN {FS="," } { print $1 }')
 }
 
 function sortTable {
-  clear
+
   select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Sort Table" \
     --button=gtk-ok:0 \
      --form \
@@ -403,16 +406,35 @@ function sortTable {
     then
     rm -rf result.csv
     fi
+    x=$fid
+    (( x += 1))
+
+  datatype=$(awk 'BEGIN{FS=","}{if(NR== "'$x'") {for(i=1;i<=NF;i++){if(i=='2') print $i}}}' .$tableName 2>>./.error.log)
+  echo $datatype
   case $option in
     As*)
     clear
-    awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -t "," -k$fid  >>result.csv
-   libreoffice result.csv
+        if [[ $datatype == "Integer" ]]
+        then
+          awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -n -t "," -k$fid  >>result.csv
+         libreoffice result.csv
+       else
+         awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -t "," -k$fid  >>result.csv
+        libreoffice result.csv
+      fi
+   #  awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -n -t "," -k$fid  >>result.csv
+   # libreoffice result.csv
        ;;
     Des*)
     clear
-    awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -r -t "," -k$fid  >>result.csv
+    if [[ $datatype == "Integer" ]]
+    then
+    awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -n -r -t "," -k$fid  >>result.csv
    libreoffice result.csv
+ else
+   awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -r -t "," -k$fid  >>result.csv
+  libreoffice result.csv
+fi
         ;;
 
       Exit*) exit 1  ;;
@@ -422,6 +444,44 @@ function sortTable {
   fi
 tableSelection
 }
+
+function displayTable {
+  clear
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Display Table" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name" )
+    tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+    if ! [[ -f .$tableName ]]; then
+     yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+     tableSelection
+   else
+     libreoffice .$tableName
+     tableSelection
+     fi
+
+}
+function dropTable {
+  clear
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Display Table" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name" )
+    tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+    if ! [[ -f $tableName.csv ]] ; then
+     yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+     tableSelection
+   fi
+  rm -rf $tableName.csv .$tableName 2>>./.error.log
+  if [[ $? == 0 ]]
+  then
+    yad --text  "Successfully Dropped" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+  else
+    yad --text  "Error Dropping table" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+  fi
+  tableSelection
+}
+
 
 
 function Main {
