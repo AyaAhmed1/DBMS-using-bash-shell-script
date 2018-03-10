@@ -1,5 +1,4 @@
 #!/bin/bash
-
 mkdir DBMS 2>> ./.error.log
 clear
 function createDB {
@@ -23,37 +22,19 @@ Main
 function selectDB {
 data=$(yad --title "Select DataBase"  --separator="," --geometry="400x200+100+100"   --form --field="DB Name" --button=gtk-ok:0  )
 dbName=$(echo $data | awk 'BEGIN {FS="," } { print $1 }')
+  if [[ $dbName == "" ]]
+  then
+  yad --text "you cant access an empty DB" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+  Main
+  else
     cd ./DBMS/$dbName 2>>./.error.log
     if [[ $? == 0 ]]; then
       tableSelection
     else
       yad --text " Not Found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
     fi
+  fi
   }
-
-function tableSelection {
-  selection=$(yad --geometry="400x100+100+100"  --title "Select DB" --entry  \
-      --button="gtk-ok:0" \
-     --button="gtk-close:1" \
-      --entry-text \
-      "Create table" "Insert into table" "Select all from table" "Delete From Table" "Update table" "Alter Table"  "Exit")
-      ret=$?
-      [[ $ret -eq 1 ]] && exit 0
-      if [[ $ret -eq 2 ]]; then
-          gdmflexiserver --startnew &
-          exit 0
-      fi
-      case $selection in
-          Create*) createTable ;;
-          Insert*) insert ;;
-          Select*) selectAll ;;
-          Delete*)deleteFromTable ;;
-          Update*) updateTable ;;
-          Alter*) alterTable ;;
-          Exit*) exit 1 ;;
-          *) exit 1 ;;
-      esac
-}
 
 function createTable {
     table=$(yad --title "Create Table" --separator="," --geometry="400x200+100+100" --form --field="Table Name" --field="Number of columns" --button=gtk-ok:0  )
@@ -122,6 +103,11 @@ if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
     null=$(echo $many | awk 'BEGIN {FS="," } { print $4 }')
     defvalue=$(echo $many | awk 'BEGIN {FS="," } { print $5 }')
     fi
+ if [[ $colName == '' ]]
+     then 
+      yad --text "column name must have a value" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+  tableSelection
+   fi
 
      if [[ $colType == "Integer" ]]; then
         if [[ $defvalue =~ ^[0-9]*$ ]]; then
@@ -159,6 +145,7 @@ if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
            yad --text "Error Creating Table" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
            createTable
 
+        
          fi
 fi
 }
@@ -404,7 +391,409 @@ val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
   fi
 }
 
+function sortTable {
 
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Sort Table" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name" \
+    --field="Enter Field Name" \
+    --field="Options":CB \
+    "" "" 'Ascending!Descending')
+    tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+    field=$(echo $select_name | awk 'BEGIN {FS="," } { print $2 }')
+    option=$(echo $select_name | awk 'BEGIN {FS="," } { print $3 }')
+
+    if ! [[ -f $tableName.csv ]]; then
+     yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+     tableSelection
+     fi
+   fid=$(awk 'BEGIN{FS=","}{if(NR==1){for(i=1;i<=NF;i++){if($i=="'$field'") print i}}}' $tableName.csv)
+   if [[ $fid == "" ]]
+   then
+     yad --text  "Field not found" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+      tableSelection
+   else
+
+    if [[ -f result.csv ]]
+    then
+    rm -rf result.csv
+    fi
+    x=$fid
+    (( x += 1))
+
+  datatype=$(awk 'BEGIN{FS=","}{if(NR== "'$x'") {for(i=1;i<=NF;i++){if(i=='2') print $i}}}' .$tableName 2>>./.error.log)
+  echo $datatype
+  case $option in
+    As*)
+    clear
+        if [[ $datatype == "Integer" ]]
+        then
+          awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -n -t "," -k$fid  >>result.csv
+         libreoffice result.csv
+       else
+         awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -t "," -k$fid  >>result.csv
+        libreoffice result.csv
+      fi
+
+       ;;
+    Des*)
+    clear
+    if [[ $datatype == "Integer" ]]
+    then
+    awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -n -r -t "," -k$fid  >>result.csv
+   libreoffice result.csv
+ else
+   awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -r -t "," -k$fid  >>result.csv
+  libreoffice result.csv
+fi
+        ;;
+
+#<<<<<<< HEAD
+
+#=======
+      Exit*) exit 1  ;;
+      *) exit 1 ;;
+  esac
+
+  fi
+tableSelection
+}
+function alterTable {
+  many=$(yad --separator="," --geometry="400x100+100+100"  --title="Alter Table" --entry \
+        --text "options" \
+        --button=gtk-ok:0 \
+          --entry-text \
+    "Rename table" "Add Column" "Edit Column" "Delete Column" )
+case $many in
+      Rename*) renameTable ;;
+    Add*) addCol  ;;
+    Edit*) alter ;;
+    Delete*) delCol ;;
+    *) exit 1 ;;
+esac
+eval exec $cmd
+}
+function renameTable {
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Rename Table" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name"
+    )
+tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+if ! [[ -f $tableName.csv ]]; then
+ yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+ tableSelection
+ fi
+ new_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Rename Table" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter new Table Name"
+    )
+    new_tableName=$(echo $new_name | awk 'BEGIN {FS="," } { print $1 }')
+    mv $tableName.csv $new_tableName.csv
+    mv .$tableName .$new_tableName
+        yad --text  "Renamed Successfully" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+        tableSelection
+function displayTable {
+  clear
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Display Table" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name" )
+    tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+    if ! [[ -f .$tableName ]]; then
+     yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+     tableSelection
+   else
+     libreoffice .$tableName
+     tableSelection
+     fi
+
+}
+function dropTable {
+  clear
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Display Table" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name" )
+    tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+    if ! [[ -f $tableName.csv ]] ; then
+     yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+     tableSelection
+   fi
+  rm -rf $tableName.csv .$tableName 2>>./.error.log
+  if [[ $? == 0 ]]
+  then
+    yad --text  "Successfully Dropped" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+  else
+    yad --text  "Error Dropping table" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+  fi
+  tableSelection
+}
+
+
+}
+function alter {
+   table_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Alter Table" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name"
+    )
+tableName=$(echo $table_name | awk 'BEGIN {FS="," } { print $1 }')
+if ! [[ -f $tableName.csv ]]; then
+ yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+ tableSelection
+ fi
+ sep=","
+         rSep="\n"
+  pKey=""
+        unique=""
+        null=""
+  flag=0
+    NR=$(awk 'BEGIN{FS=","}{if ($'3' == "'PK'") print NR}' .$tableName 2>>./.error.log)
+
+    if [[ ( $NR == "" ) ]]; then
+  options=$(yad --separator="," --geometry="400x200+100+100"  --title="Alter Table" \
+   --button=gtk-ok:0 \
+    --form \
+   --field="Enter Condition column name" \
+   --field="Enter new Value to set" \
+   --field="Type of Column ":CB \
+   --field="Make PrimaryKey ?":CB   \
+   --field="Make it Unique? ":CB \
+        --field="Accepts Null? ":CB \
+    "" "" 'Integer!String' 'PK!normal' 'Yes!No' 'Yes!No'
+   )
+        field=$(echo $options | awk 'BEGIN {FS="," } { print $1 }')
+        newValue=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
+        colType=$(echo $options | awk 'BEGIN {FS="," } { print $3 }')
+    pKey=$(echo $options | awk 'BEGIN {FS="," } { print $4 }')
+    unique=$(echo $options | awk 'BEGIN {FS="," } { print $5 }')
+    null=$(echo $options | awk 'BEGIN {FS="," } { print $6 }')
+
+    else
+    many=$(yad --separator="," --geometry="400x200+100+100"  --title="Alter Table" --text="Please enter table stracture:" \
+              --button=gtk-ok:0 \
+               --form \
+              --field="Enter Condition column name" \
+   --field="Enter new Value to set:"  \
+              --field="Type of Column No. $counter":CB \
+    --field="Make it Unique ":CB \
+    --field="Accepts Null? ":CB \
+    "" "" 'Integer!String' 'Yes!No' 'Yes!No'
+              )
+              field=$(echo $many | awk 'BEGIN {FS="," } { print $1 }')
+
+        newValue=$(echo $many | awk 'BEGIN {FS="," } { print $2 }')
+
+        colType=$(echo $many | awk 'BEGIN {FS="," } { print $3 }')
+
+
+    pKey="normal";
+    unique=$(echo $many | awk 'BEGIN {FS="," } { print $4 }')
+    null=$(echo $many | awk 'BEGIN {FS="," } { print $5 }')
+
+    fi
+    fid=$(awk 'BEGIN{FS=","}{if(NR==1){for(i=1;i<=NF;i++){if($i=="'$field'") print i}}}' $tableName.csv)
+  if [[ $fid == "" ]]
+  then
+    yad --text  "Field not found" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+     tableSelection
+
+  else
+        sed -i -- 's/'$field'/'$newValue'/g' .$tableName 2>>./.error.log
+        sed -i -- 's/'$field'/'$newValue'/g' $tableName.csv 2>>./.error.log
+
+
+     if [[ $colType == "Integer" ]]; then
+        if [[ $defvalue =~ ^[0-9]*$ ]]; then
+
+    varr=1;
+         else
+           yad --text "Invalid data type for the default value" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+    alter
+        fi
+        else
+          if [[ $defvalue =~ ^[a-zA-Z]*$ ]]; then
+    varr=1;
+    else
+     yad --text "Invalid data type for the default value" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+    alter
+        fi
+      fi
+             NR=$(awk 'BEGIN{FS=","}{if ($'1' == "'$newValue'") print NR}' .$tableName 2>>./.error.log)
+
+             oldValue=$(awk 'BEGIN{FS=","}{if(NR=='$NR'){for(i=1;i<=NF;i++){if(i=='2') print $i}}}' .$tableName 2>>./.error.log)
+       oldpk=$(awk 'BEGIN{FS=","}{if(NR=='$NR'){for(i=1;i<=NF;i++){if(i=='3') print $i}}}' .$tableName 2>>./.error.log)
+       oldunq=$(awk 'BEGIN{FS=","}{if(NR=='$NR'){for(i=1;i<=NF;i++){if(i=='4') print $i}}}' .$tableName 2>>./.error.log)
+       oldnull=$(awk 'BEGIN{FS=","}{if(NR=='$NR'){for(i=1;i<=NF;i++){if(i=='5') print $i}}}' .$tableName 2>>./.error.log)
+
+             sed -i ''$NR's/'$oldValue'/'$colType'/g' .$tableName 2>>./.error.log
+             sed -i ''$NR's/'$oldpk'/'$pKey'/g' .$tableName 2>>./.error.log
+             sed -i ''$NR's/'$oldunq'/'$unique'/g' .$tableName 2>>./.error.log
+             sed -i ''$NR's/'$oldnull'/'$null'/g' .$tableName 2>>./.error.log
+
+             yad --text "table updated successfully" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+
+        tableSelection
+
+fi
+
+}
+
+function addCol {
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Delete field" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name"
+    )
+tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+if ! [[ -f $tableName.csv ]]; then
+ yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+ tableSelection
+ fi
+ 
+ NR=$(awk 'BEGIN{FS=","}{if ($'3' == "'PK'") print NR}' .$tableName 2>>./.error.log)
+
+    if [[ ( $NR == "" ) ]]; then
+   many=$(yad --separator="," --geometry="400x200+100+100"  --title="alter Table" --text="Please enter table stracture:" \
+              --button=gtk-ok:0 \
+               --form \
+              --field="Name of Column " \
+              --field="Type of Column ":CB \
+    --field="Make it a primary key? ":CB \
+        --field="Make it Unique? ":CB \
+        --field="Accepts Null? ":CB \
+         --field="Default value " \
+    "" 'Integer!String' 'PK!normal' 'Yes!No' 'Yes!No' ""
+              )
+               colName=$(echo $many | awk 'BEGIN {FS="," } { print $1 }')
+                 colType=$(echo $many | awk 'BEGIN {FS="," } { print $2 }')
+    pKey=$(echo $many | awk 'BEGIN {FS="," } { print $3 }')
+    unique=$(echo $many | awk 'BEGIN {FS="," } { print $4 }')
+    null=$(echo $many | awk 'BEGIN {FS="," } { print $5 }')
+    defvalue=$(echo $many | awk 'BEGIN {FS="," } { print $6 }')
+  else
+     many=$(yad --separator="," --geometry="400x200+100+100"  --title="alter Table" --text="Please enter table stracture:" \
+              --button=gtk-ok:0 \
+               --form \
+              --field="Name of Column " \
+              --field="Type of Column ":CB \
+        --field="Make it Unique? ":CB \
+        --field="Accepts Null? ":CB \
+         --field="Default value " \
+    "" 'Integer!String' 'Yes!No' 'Yes!No' ""
+              )
+               colName=$(echo $many | awk 'BEGIN {FS="," } { print $1 }')
+                 colType=$(echo $many | awk 'BEGIN {FS="," } { print $2 }')
+    pKey='normal';
+    unique=$(echo $many | awk 'BEGIN {FS="," } { print $3 }')
+    null=$(echo $many | awk 'BEGIN {FS="," } { print $4 }')
+    defvalue=$(echo $many | awk 'BEGIN {FS="," } { print $5 }')
+  fi
+   if [[ $colName == '' ]]
+     then 
+      yad --text "column name must have a value" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+  tableSelection
+   else
+
+
+  sep=","
+  rsep="\n"
+  echo -e  "$colName$sep$colType$sep$pKey$sep$unique$sep$null$sep$defvalue" >> .$tableName 2>>./.error.log
+  sed -i ''1's/$/'$sep$colName'/' $tableName.csv 2>>./.error.log
+  yad --text "field added" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+ tableSelection
+fi
+}
+
+function delCol {
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Delete field" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name"
+    )
+tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+if ! [[ -f $tableName.csv ]]; then
+ yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+ tableSelection
+ fi
+
+options=$(yad --separator="," --geometry="400x200+100+100"  --title="Delete field" \
+  --button=gtk-ok:0 \
+   --form \
+  --field="Enter Condition column name"
+  )
+field=$(echo $options | awk 'BEGIN {FS="," } { print $1 }')
+
+  fid=$(awk 'BEGIN{FS=","}{if(NR==1){for(i=1;i<=NF;i++){if($i=="'$field'") print i}}}' $tableName.csv)
+  if [[ $fid == "" ]]
+  then
+    yad --text  "Field not found" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+    tableSelection
+  else
+    x=$fid
+    (( x += 1))
+ pk=$(awk 'BEGIN{FS=","}{if(NR=="'$x'"){for(i=1;i<=NF;i++){if(i=='3') print $i}}}' .$tableName 2>>./.error.log)
+if [[ $pk == 'PK' ]]
+  then
+yad --text  "cant delete primary key" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+    tableSelection
+  else
+   NR=$(awk 'BEGIN{FS=","}{if ($'1' == "'$field'") print NR}' .$tableName 2>>./.error.log)
+   sed -i 's/[^,]*//'$fid'' $tableName.csv 2>>./.error.log
+   sed -i ''$NR'd' .$tableName 2>>./.error.log
+   sed -i 's/[^,]*,//' $tableName.csv 2>>./.error.log
+ yad --text  "field deleted successfully" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+    tableSelection
+fi
+fi
+}
+function updateTable {
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Update Table" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name"
+    )
+tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+if ! [[ -f $tableName.csv ]]; then
+ yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+ tableSelection
+ fi
+ options=$(yad --separator="," --geometry="400x200+100+100"  --title="Delete from Table" \
+   --button=gtk-ok:0 \
+    --form \
+   --field="Enter Condition column name" \
+   --field="Enter Value to be updated"  \
+   --field="Enter new Value to set" \
+   )
+  field=$(echo $options | awk 'BEGIN {FS="," } { print $1 }')
+  fid=$(awk 'BEGIN{FS=","}{if(NR==1){for(i=1;i<=NF;i++){if($i=="'$field'") print i}}}' $tableName.csv)
+  if [[ $fid == "" ]]
+  then
+    yad --text  "Field not found" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+     tableSelection
+  else
+    val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
+    res=$(awk 'BEGIN{FS=","}{if ($'$fid'=="'$val'") print $'$fid'}' $tableName.csv 2>>./.error.log)
+    if [[ $res == "" ]]
+    then
+      yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+      tableSelection
+    else
+
+      newValue=$(echo $options | awk 'BEGIN {FS="," } { print $3 }')
+        NR=$(awk 'BEGIN{FS=","}{if ($'$fid' == "'$val'") print NR}' $tableName.csv 2>>./.error.log)
+        oldValue=$(awk 'BEGIN{FS=","}{if(NR=='$NR'){for(i=1;i<=NF;i++){if(i=='$fid') print $i}}}' $tableName.csv 2>>./.error.log)
+        echo $oldValue
+        sed -i ''$NR's/'$oldValue'/'$newValue'/g' $tableName.csv 2>>./.error.log
+        yad --text  "Row updated Successfully" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+        tableSelection
+fi
+fi
+}
+#>>>>>>> 6a74bc2db415ade450f2bec0487af714632f0cb6
 function selectAll {
   many=$(yad --separator="," --geometry="400x200+100+100"  --title="Select from Table" --text="Please enter table stracture:" \
               --button=gtk-ok:0 \
@@ -448,6 +837,35 @@ function selectAll {
   fi
 }
 
+function tableSelection {
+  selection=$(yad --geometry="400x100+100+100"  --title "Select DB" --entry  \
+      --button="gtk-ok:0" \
+     --button="gtk-close:1" \
+      --entry-text \
+      "Create table" "Insert into table" "Select all from table"  "Delete From Table" "Update table" "Alter Table" "Sort Table" "Display Table Description" "Drop Table" "Main Menu" "Exit")
+      ret=$?
+      [[ $ret -eq 1 ]] && exit 0
+      if [[ $ret -eq 2 ]]; then
+          gdmflexiserver --startnew &
+          exit 0
+      fi
+      case $selection in
+          Create*) createTable ;;
+          Insert*) insert ;;
+          Select*) selectAll ;;
+          Delete*)deleteFromTable ;;
+          Update*) updateTable ;;
+          Alter*) alterTable ;;
+          Display*) displayTable ;;
+          Drop*)  dropTable ;;
+          Main*) cd ../.. 2>>./.error.log; Main ;;
+          Sort*) sortTable ;;
+
+          Exit*) exit 1 ;;
+          *) exit 1 ;;
+      esac
+}
+
 function Main {
   action=$(yad --geometry="400x100+100+100"  --title "DBMS" --entry  \
   --text "Welcome" \
@@ -455,7 +873,7 @@ function Main {
       --button="gtk-ok:0" \
      --button="gtk-close:1" \
       --entry-text \
-      "Create DataBase" "Select DataBase" )
+      "Create DataBase" "Select DataBase" "Exit")
   ret=$?
 
   [[ $ret -eq 1 ]] && exit 0

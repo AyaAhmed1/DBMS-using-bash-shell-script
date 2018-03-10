@@ -1,3 +1,0 @@
-Field,Type,key,unique,null,default
-id,Integer,PK,Yes,No,
-name,String,normal,Yes,No,
