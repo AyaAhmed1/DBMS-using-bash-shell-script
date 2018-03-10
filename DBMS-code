@@ -1,7 +1,5 @@
 #!/bin/bash
 
-echo "Welcome in DBMS"
-echo "Authors: Aya Ahmed - Dina Ahmed - Mai Ahmed"
 mkdir DBMS 2>> ./.error.log
 clear
 function createDB {
@@ -32,7 +30,139 @@ dbName=$(echo $data | awk 'BEGIN {FS="," } { print $1 }')
       yad --text " Not Found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
     fi
   }
-  function Main {
+  
+function tableSelection {
+  selection=$(yad --geometry="400x100+100+100"  --title "Select DB" --entry  \
+      --button="gtk-ok:0" \
+     --button="gtk-close:1" \
+      --entry-text \
+      "Create table" "Insert into table" "Select all from table"  "Delete From Table" "Update table" "Alter Table" "Exit")
+      ret=$?
+      [[ $ret -eq 1 ]] && exit 0
+      if [[ $ret -eq 2 ]]; then
+          gdmflexiserver --startnew &
+          exit 0
+      fi
+      case $selection in
+          Create*) createTable ;;
+          Insert*) insert ;;
+          Select*) selectAll ;;
+          Delete*)deleteFromTable ;;
+          Update*) updateTable ;;
+          Alter*) alterTable ;;
+          Exit*) exit 1 ;;
+          *) exit 1 ;;
+      esac
+}
+
+function createTable {
+    table=$(yad --title "Create Table" --separator="," --geometry="400x200+100+100" --form --field="Table Name" --field="Number of columns" --button=gtk-ok:0  )
+    tableName=$(echo $table | awk 'BEGIN {FS="," } { print $1 }')
+    colsNum=$(echo $table | awk 'BEGIN {FS="," } { print $2 }')
+if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
+  then 
+  yad --text "you cant create an empty Table" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+  tableSelection
+  else
+    if [[ -f $tableName.csv ]]
+         then
+           yad --text "Table already exsist " --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+           tableSelection
+        fi
+        counter=1
+        sep=","
+        rSep="\n"
+        pKey=""
+        unique=""
+        null=""
+        defvalue=""
+        flag=0
+        metaData="Field"$sep"Type"$sep"key"$sep"unique"$sep"null"$sep"default"
+         while [ $counter -le $colsNum ]
+          do
+    if [[ ( $flag -eq 0 ) ]]; then
+            many=$(yad --separator="," --geometry="400x200+100+100"  --title="Create Table" --text="Please enter table stracture:" \
+              --button=gtk-ok:0 \
+               --form \
+              --field="Name of Column No.$counter" \
+              --field="Type of Column No. $counter":CB \
+              --field="Make it a primary key? ":CB \
+              --field="Make it Unique? ":CB \
+              --field="Accepts Null? ":CB \
+              --field="Default value " \
+              "" 'Integer!String' 'PK!normal' 'Yes!No' 'Yes!No' ""
+              )
+    
+    colName=$(echo $many | awk 'BEGIN {FS="," } { print $1 }')
+    colType=$(echo $many | awk 'BEGIN {FS="," } { print $2 }')
+    pKey=$(echo $many | awk 'BEGIN {FS="," } { print $3 }')
+    unique=$(echo $many | awk 'BEGIN {FS="," } { print $4 }')
+    null=$(echo $many | awk 'BEGIN {FS="," } { print $5 }')
+    defvalue=$(echo $many | awk 'BEGIN {FS="," } { print $6 }')
+    if [[ $pKey == "PK" ]]; then
+    flag=1;
+    fi 
+    
+    else
+    many=$(yad --separator="," --geometry="400x200+100+100"  --title="Create Table" --text="Please enter table stracture:" \
+              --button=gtk-ok:0 \
+               --form \
+              --field="Name of Column No.$counter" \
+              --field="Type of Column No. $counter":CB \
+              --field="Make it Unique ":CB \
+              --field="Accepts Null? ":CB \
+              --field="Default value " \
+              "" 'Integer!String' 'Yes!No' 'Yes!No' ""
+              )
+
+    colName=$(echo $many | awk 'BEGIN {FS="," } { print $1 }')
+    colType=$(echo $many | awk 'BEGIN {FS="," } { print $2 }')
+    pKey="normal";
+    unique=$(echo $many | awk 'BEGIN {FS="," } { print $3 }')
+    null=$(echo $many | awk 'BEGIN {FS="," } { print $4 }')
+    defvalue=$(echo $many | awk 'BEGIN {FS="," } { print $5 }')
+    fi
+    
+     if [[ $colType == "Integer" ]]; then
+        if [[ $defvalue =~ ^[0-9]*$ ]]; then
+
+    varr=1;
+         else
+           yad --text "Invalid data type for the default value" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+    createTable
+        fi
+        else
+          if [[ $defvalue =~ ^[a-zA-Z]*$ ]]; then
+    varr=1;
+    else
+     yad --text "Invalid data type for the default value" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+    createTable
+        fi
+      fi
+       metaData+=$rSep$colName$sep$colType$sep$pKey$sep$unique$sep$null$sep$defvalue
+                        if [[ $counter == $colsNum ]]; then
+                          temp=$temp$colName
+                        else
+                          temp=$temp$colName$sep
+                        fi
+                         ((counter++))
+                      done
+        touch .$tableName
+         echo -e $metaData  >> .$tableName
+        touch $tableName.csv
+         echo -e $temp >> $tableName.csv
+         if [[ $? == 0 ]]
+         then
+           yad --text "Table Created Successfully" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+        tableSelection
+         else
+           yad --text "Error Creating Table" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+           createTable
+
+         fi
+fi
+}
+function Main {
   action=$(yad --geometry="400x100+100+100"  --title "DBMS" --entry  \
   --text "Welcome" \
   --text "Options:" \
