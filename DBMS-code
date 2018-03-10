@@ -30,13 +30,13 @@ dbName=$(echo $data | awk 'BEGIN {FS="," } { print $1 }')
       yad --text " Not Found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
     fi
   }
-  
+
 function tableSelection {
   selection=$(yad --geometry="400x100+100+100"  --title "Select DB" --entry  \
       --button="gtk-ok:0" \
      --button="gtk-close:1" \
       --entry-text \
-      "Create table" "Insert into table" "Select all from table"  "Delete From Table" "Update table" "Alter Table" "Exit")
+      "Create table" "Insert into table" "Select all from table"  "Delete From Table" "Update table" "Alter Table"  "Exit")
       ret=$?
       [[ $ret -eq 1 ]] && exit 0
       if [[ $ret -eq 2 ]]; then
@@ -60,7 +60,7 @@ function createTable {
     tableName=$(echo $table | awk 'BEGIN {FS="," } { print $1 }')
     colsNum=$(echo $table | awk 'BEGIN {FS="," } { print $2 }')
 if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
-  then 
+  then
   yad --text "you cant create an empty Table" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
   tableSelection
   else
@@ -92,7 +92,7 @@ if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
               --field="Default value " \
               "" 'Integer!String' 'PK!normal' 'Yes!No' 'Yes!No' ""
               )
-    
+
     colName=$(echo $many | awk 'BEGIN {FS="," } { print $1 }')
     colType=$(echo $many | awk 'BEGIN {FS="," } { print $2 }')
     pKey=$(echo $many | awk 'BEGIN {FS="," } { print $3 }')
@@ -101,8 +101,8 @@ if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
     defvalue=$(echo $many | awk 'BEGIN {FS="," } { print $6 }')
     if [[ $pKey == "PK" ]]; then
     flag=1;
-    fi 
-    
+    fi
+
     else
     many=$(yad --separator="," --geometry="400x200+100+100"  --title="Create Table" --text="Please enter table stracture:" \
               --button=gtk-ok:0 \
@@ -122,7 +122,7 @@ if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
     null=$(echo $many | awk 'BEGIN {FS="," } { print $4 }')
     defvalue=$(echo $many | awk 'BEGIN {FS="," } { print $5 }')
     fi
-    
+
      if [[ $colType == "Integer" ]]; then
         if [[ $defvalue =~ ^[0-9]*$ ]]; then
 
@@ -162,6 +162,219 @@ if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
          fi
 fi
 }
+
+function insert {
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Create Table" --text="Please enter table stracture:" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name"
+    )
+tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+if ! [[ -f $tableName.csv ]]; then
+yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+tableSelection
+fi
+colsNum=`awk 'END{print NR}' .$tableName`
+sep=","
+ rSep="\n"
+ row=""
+ for (( i = 2; i <= $colsNum; i++ )); do
+   colName=$(awk 'BEGIN{FS=","}{ if(NR=='$i') print $1}' .$tableName)
+   colType=$( awk 'BEGIN{FS=","}{if(NR=='$i') print $2}' .$tableName)
+   colKey=$( awk 'BEGIN{FS=","}{if(NR=='$i') print $3}' .$tableName)
+   colUnique=$( awk 'BEGIN{FS=","}{if(NR=='$i') print $4}' .$tableName)
+   colNull=$( awk 'BEGIN{FS=","}{if(NR=='$i') print $5}' .$tableName)
+   coldef=$( awk 'BEGIN{FS=","}{if(NR=='$i') print $6}' .$tableName)
+
+input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
+  --button=gtk-ok:0 \
+   --form \
+  --field="Enter $colName $colType"
+  )
+data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+  # Validate Input
+  if [[ $colType == "Integer" ]]; then
+    while ! [[ $data =~ ^[0-9]*$ ]]; do
+      yad --text "invalid input" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+      input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
+        --button=gtk-ok:0 \
+         --form \
+        --field="Enter $colName $colType"
+            )
+    data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+    done
+  fi
+  if [[ $colType == "String" ]]; then
+    while ! [[ $data =~ ^[a-zA-Z]*$ ]]; do
+      yad --text "invalid input" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+      input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
+        --button=gtk-ok:0 \
+         --form \
+        --field="Enter $colName $colType"
+            )
+    data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+    done
+  fi
+
+ if [[ $colKey == "PK" ]]; then
+   if [[ $colType == "Integer" ]]; then
+     while [[ true ]]; do
+       if [[ $data =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$i'-1))}' $tableName.csv`]$ ]]; then
+         yad --text "invalid input for PrimaryKey" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+       else
+         break;
+       fi
+       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
+         --button=gtk-ok:0 \
+          --form \
+         --field="Enter $colName $colType"
+             )
+     data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+     done
+fi
+  if [[ $colType == "String" ]]; then
+while [[ true ]]; do
+       if [[ "$data" =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print "$(('$i'-1))" }' $tableName.csv`]$ ]]; then
+         yad --text "invalid input for PrimaryKey" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+       else
+         break;
+       fi
+       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
+         --button=gtk-ok:0 \
+          --form \
+         --field="Enter $colName $colType"
+             )
+     data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+     done
+   fi
+ fi
+
+
+if [[ $colUnique == "Yes" ]]; then
+if [[ $colType == "Integer" ]]; then
+while [[ true ]]; do
+       if [[ $data =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$i'-1))}' $tableName.csv`]$ ]]; then
+         yad --text "Not unique" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+       else
+         break;
+       fi
+       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
+         --button=gtk-ok:0 \
+          --form \
+         --field="Enter $colName $colType"
+             )
+     data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+     done
+fi
+  if [[ $colType == "String" ]]; then
+ while [[ true ]]; do
+  flagg=0;
+for eachword in `awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$i'-1))}' $tableName.csv`; do
+ if [[ "$data" == "$eachword" ]]; then
+    yad --text "Not unique" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+    flagg=1;
+  fi
+done
+  if [[ $flagg == 1 ]]; then
+  input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
+         --button=gtk-ok:0 \
+          --form \
+         --field="Enter $colName $colType"
+             )
+     data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+  else
+  break;
+   fi
+done
+fi
+fi
+
+if [[ $colNull == "No" ]]; then
+while [[ true ]]; do
+  if [[ $data =~ ^$ ]]; then
+  yad --text "this field doesn't accept null values" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+  else
+    break;
+  fi
+  input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
+         --button=gtk-ok:0 \
+          --form \
+         --field="Enter $colName $colType"
+             )
+     data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+done
+else
+while [[ true ]]; do
+  if [[ $data =~ ^$ ]]; then
+   data=$coldef
+ yad --text "this field  accept null values then the default value will be used" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+    break;
+  else
+    break;
+  fi
+done
+fi
+  if [[ $i == $colsNum ]]; then
+    row=$row$data$rSep
+  else
+    row=$row$data$sep
+  fi
+done
+echo -e $row"\c" >> $tableName.csv
+if [[ $? == 0 ]]
+then
+  yad --text  "Data Inserted Successfully " --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+
+else
+    yad --text  "Error" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+fi
+row=""
+tableSelection
+}
+
+
+function deleteFromTable {
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Delete from Table" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name"
+    )
+tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+if ! [[ -f $tableName.csv ]]; then
+ yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+ tableSelection
+ fi
+options=$(yad --separator="," --geometry="400x200+100+100"  --title="Delete from Table" \
+  --button=gtk-ok:0 \
+   --form \
+  --field="Enter Condition column name" \
+  --field="Enter Value to be deleted"
+  )
+field=$(echo $options | awk 'BEGIN {FS="," } { print $1 }')
+
+  fid=$(awk 'BEGIN{FS=","}{if(NR==1){for(i=1;i<=NF;i++){if($i=="'$field'") print i}}}' $tableName.csv)
+  if [[ $fid == "" ]]
+  then
+    yad --text  "Field not found" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+    tableSelection
+  else
+    val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
+    res=$(awk 'BEGIN{FS=","}{if ($'$fid'=="'$val'") print $'$fid'}' $tableName.csv 2>>./.error.log)
+    if [[ $res == "" ]]
+    then
+      yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+      tableSelection
+    else
+      NR=$(awk 'BEGIN{FS=","}{if ($'$fid'=="'$val'") print NR}' $tableName.csv 2>>./.error.log)
+      sed -i ''$NR'd' $tableName.csv 2>>./.error.log
+      yad --text  "Successfully Deleted" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+       tableSelection
+    fi
+  fi
+}
+
+
+
 function Main {
   action=$(yad --geometry="400x100+100+100"  --title "DBMS" --entry  \
   --text "Welcome" \
@@ -181,6 +394,7 @@ function Main {
   case $action in
       Create*) createDB  ;;
       Select*) selectDB ;;
+      Exit*) exit 1  ;;
       *) exit 1 ;;
   esac
   eval exec $cmd
