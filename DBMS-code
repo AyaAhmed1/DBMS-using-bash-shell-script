@@ -661,6 +661,51 @@ field=$(echo $options | awk 'BEGIN {FS="," } { print $1 }')
 fi
 
 }
+function updateTable {
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Update Table" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name"
+    )
+tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+if ! [[ -f $tableName.csv ]]; then
+ yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+ tableSelection
+ fi
+ options=$(yad --separator="," --geometry="400x200+100+100"  --title="Delete from Table" \
+   --button=gtk-ok:0 \
+    --form \
+   --field="Enter Condition column name" \
+   --field="Enter Value to be updated"  \
+   --field="Enter new Value to set" \
+   )
+  field=$(echo $options | awk 'BEGIN {FS="," } { print $1 }')
+  fid=$(awk 'BEGIN{FS=","}{if(NR==1){for(i=1;i<=NF;i++){if($i=="'$field'") print i}}}' $tableName.csv)
+  if [[ $fid == "" ]]
+  then
+    yad --text  "Field not found" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+     tableSelection
+  else
+    val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
+    res=$(awk 'BEGIN{FS=","}{if ($'$fid'=="'$val'") print $'$fid'}' $tableName.csv 2>>./.error.log)
+    if [[ $res == "" ]]
+    then
+      yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+      tableSelection
+    else
+      
+      newValue=$(echo $options | awk 'BEGIN {FS="," } { print $3 }')
+        NR=$(awk 'BEGIN{FS=","}{if ($'$fid' == "'$val'") print NR}' $tableName.csv 2>>./.error.log)
+        oldValue=$(awk 'BEGIN{FS=","}{if(NR=='$NR'){for(i=1;i<=NF;i++){if(i=='$fid') print $i}}}' $tableName.csv 2>>./.error.log)
+        echo $oldValue
+        sed -i ''$NR's/'$oldValue'/'$newValue'/g' $tableName.csv 2>>./.error.log
+        yad --text  "Row updated Successfully" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+        tableSelection
+      
+    fi
+  fi
+}
+
 function Main {
   action=$(yad --geometry="400x100+100+100"  --title "DBMS" --entry  \
   --text "Welcome" \
