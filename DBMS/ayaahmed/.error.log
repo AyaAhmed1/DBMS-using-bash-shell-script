@@ -1,4 +1,9 @@
-./DBMS-code: line 26: cd: ./DBMS/ayaahmed: No such file or directory
-./DBMS-code: line 26: cd: ./DBMS/ayaahmed: No such file or directory
-./DBMS-code: line 26: cd: ./DBMS/ayaahmed: No such file or directory
-./DBMS-code: line 26: cd: ./DBMS/ayaahmed: No such file or directory
+sort: stray character in field spec: invalid field specification ‘1-g’
+sort: stray character in field spec: invalid field specification ‘1-g’
+sort: cannot read: ,2: No such file or directory
+sort: multi-character tab ‘-r’
+sort: multi-character tab ‘-r’
+sort: invalid option -- '+'
+Try 'sort --help' for more information.
+sort: cannot read: 2: No such file or directory
+sort: cannot read: 2: No such file or directory

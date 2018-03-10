@@ -36,7 +36,7 @@ function tableSelection {
       --button="gtk-ok:0" \
      --button="gtk-close:1" \
       --entry-text \
-      "Create table" "Insert into table" "Select all from table"  "Delete From Table" "Update table" "Alter Table"  "Exit")
+      "Create table" "Insert into table" "Select all from table"  "Delete From Table" "Update table" "Alter Table" "Sort Table" "Main Menu" "Exit")
       ret=$?
       [[ $ret -eq 1 ]] && exit 0
       if [[ $ret -eq 2 ]]; then
@@ -50,6 +50,8 @@ function tableSelection {
           Delete*)deleteFromTable ;;
           Update*) updateTable ;;
           Alter*) alterTable ;;
+          Main*) cd ../.. 2>>./.error.log; Main ;;
+          Sort*) sortTable ;;
           Exit*) exit 1 ;;
           *) exit 1 ;;
       esac
@@ -373,6 +375,53 @@ field=$(echo $options | awk 'BEGIN {FS="," } { print $1 }')
   fi
 }
 
+function sortTable {
+  clear
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Sort Table" \
+    --button=gtk-ok:0 \
+     --form \
+    --field="Enter Table Name" \
+    --field="Enter Field Name" \
+    --field="Options":CB \
+    "" "" 'Ascending!Descending')
+    tableName=$(echo $select_name | awk 'BEGIN {FS="," } { print $1 }')
+    field=$(echo $select_name | awk 'BEGIN {FS="," } { print $2 }')
+    option=$(echo $select_name | awk 'BEGIN {FS="," } { print $3 }')
+
+    if ! [[ -f $tableName.csv ]]; then
+     yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+     tableSelection
+     fi
+   fid=$(awk 'BEGIN{FS=","}{if(NR==1){for(i=1;i<=NF;i++){if($i=="'$field'") print i}}}' $tableName.csv)
+   if [[ $fid == "" ]]
+   then
+     yad --text  "Field not found" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+      tableSelection
+   else
+
+    if [[ -f result.csv ]]
+    then
+    rm -rf result.csv
+    fi
+  case $option in
+    As*)
+    clear
+    awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -t "," -k$fid  >>result.csv
+   libreoffice result.csv
+       ;;
+    Des*)
+    clear
+    awk '{ if ( NR > 1 ) { print $0 } }' $tableName.csv | sort -r -t "," -k$fid  >>result.csv
+   libreoffice result.csv
+        ;;
+
+      Exit*) exit 1  ;;
+      *) exit 1 ;;
+  esac
+
+  fi
+tableSelection
+}
 
 
 function Main {
@@ -382,7 +431,7 @@ function Main {
       --button="gtk-ok:0" \
      --button="gtk-close:1" \
       --entry-text \
-      "Create DataBase" "Select DataBase" )
+      "Create DataBase" "Select DataBase" "Exit")
   ret=$?
 
   [[ $ret -eq 1 ]] && exit 0
