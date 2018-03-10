@@ -36,7 +36,7 @@ function tableSelection {
       --button="gtk-ok:0" \
      --button="gtk-close:1" \
       --entry-text \
-      "Create table" "Insert into table" "Select all from table"  "Delete From Table" "Update table" "Alter Table"  "Exit")
+      "Create table" "Insert into table" "Select all from table" "Delete From Table" "Update table" "Alter Table"  "Exit")
       ret=$?
       [[ $ret -eq 1 ]] && exit 0
       if [[ $ret -eq 2 ]]; then
@@ -348,32 +348,105 @@ options=$(yad --separator="," --geometry="400x200+100+100"  --title="Delete from
   --button=gtk-ok:0 \
    --form \
   --field="Enter Condition column name" \
-  --field="Enter Value to be deleted"
+  --field="Enter Value to be deleted" \
+  --field="enter a regex"
   )
 field=$(echo $options | awk 'BEGIN {FS="," } { print $1 }')
-
+reg=$(echo $options | awk 'BEGIN {FS="," } { print $3 }')
+val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
   fid=$(awk 'BEGIN{FS=","}{if(NR==1){for(i=1;i<=NF;i++){if($i=="'$field'") print i}}}' $tableName.csv)
   if [[ $fid == "" ]]
   then
     yad --text  "Field not found" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
     tableSelection
   else
-    val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
-    res=$(awk 'BEGIN{FS=","}{if ($'$fid'=="'$val'") print $'$fid'}' $tableName.csv 2>>./.error.log)
-    if [[ $res == "" ]]
-    then
-      yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-      tableSelection
+    if [[ $reg == "" ]] #filter by value only 
+      then 
+
+      if [[ $val == "" ]]
+        then
+        yad --text  "Enter a value or a regex to select with" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+    tableSelection
+      else
+      res=$(awk 'BEGIN{FS=","}{if ($'$fid'=="'$val'") print $'$fid'}' $tableName.csv 2>>./.error.log)
+      if [[ $res == "" ]]
+      then
+        yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+        tableSelection
+      else
+        NR=$(awk 'BEGIN{FS=","}{if ($'$fid'=="'$val'") print NR}' $tableName.csv 2>>./.error.log)
+        sed -i ''$NR'd' $tableName.csv 2>>./.error.log
+        yad --text  "Successfully Deleted" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+         tableSelection
+      fi
+      fi
+
+    else # filter by regex  #
+    if [[ $val == "" ]]
+        then
+      res=$(awk 'BEGIN{FS=","}{if ("$'$fid' ~ $reg") print $"$fid"}' $tableName.csv 2>>./.error.log)
+      if [[ $res == "" ]]
+      then
+        yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+        tableSelection
+      else  
+        for x in `awk 'BEGIN{FS="," ; ORS=" "}{if ("$'$fid' ~ $reg") print NF; }' $tableName.csv`; do
+        sed -i ''$x'd' $tableName.csv 2>>./.error.log
+      done
+        yad --text  "Successfully Deleted" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+         tableSelection
+      fi
     else
-      NR=$(awk 'BEGIN{FS=","}{if ($'$fid'=="'$val'") print NR}' $tableName.csv 2>>./.error.log)
-      sed -i ''$NR'd' $tableName.csv 2>>./.error.log
-      yad --text  "Successfully Deleted" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
-       tableSelection
+      yad --text  "Enter a value or a regex only to select with" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+    tableSelection
+      fi
     fi
   fi
 }
 
 
+function selectAll {
+  many=$(yad --separator="," --geometry="400x200+100+100"  --title="Select from Table" --text="Please enter table stracture:" \
+              --button=gtk-ok:0 \
+               --form \
+              --field="Enter the table name" \
+              --field="Type of file":CB \
+              "" 'CSV!HTML'
+              )
+
+    tableName=$(echo $many | awk 'BEGIN {FS="," } { print $1 }')
+    filetype=$(echo $many | awk 'BEGIN {FS="," } { print $2 }')
+    if [[ ($tableName == "") || ($filetype == "") ]];
+      then
+      yad --text "Please choose the table name and the file type " --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+    else
+    if [[ $filetype == "CSV" ]];
+      then
+      libreoffice $tableName.csv
+      tableSelection
+    else
+      if [[ -f $tableName.html ]]
+        then 
+        rm -rf $tableName.html
+        echo "<html>" >>$tableName.html
+      echo "<body>" >>$tableName.html
+      awk 'BEGIN {FS="," ; print "<table border solid black 1px>"} {print "<tr>"; for(i=1;i<=NF;i++) print "<td>" $i "</td>"; print "</tr>" } END {print "</table>"}' $tableName.csv >>$tableName.html
+      echo "</body>" >>$tableName.html
+      echo "</html>" >>$tableName.html
+      xdg-open $tableName.html
+      tableSelection
+      else
+      echo "<html>" >>$tableName.html
+      echo "<body>" >>$tableName.html
+      awk 'BEGIN {FS="," ; print "<table border solid black 1px>"} {print "<tr>"; for(i=1;i<=NF;i++) print "<td>" $i "</td>"; print "</tr>" } END {print "</table>"}' $tableName.csv >>$tableName.html
+      echo "</body>" >>$tableName.html
+      echo "</html>" >>$tableName.html
+      xdg-open $tableName.html
+      tableSelection
+    fi
+    fi
+  fi
+}
 
 function Main {
   action=$(yad --geometry="400x100+100+100"  --title "DBMS" --entry  \
