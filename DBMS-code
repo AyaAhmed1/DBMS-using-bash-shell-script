@@ -1,4 +1,58 @@
 #!/bin/bash
 
 echo "Welcome in DBMS"
-echo "Authors: Aya Ahmed - Dina Ahmed - Mai Ahmed" 
+echo "Authors: Aya Ahmed - Dina Ahmed - Mai Ahmed"
+mkdir DBMS 2>> ./.error.log
+clear
+function createDB {
+    data=$(yad --title "Create DataBase" --width 400  --separator="," --geometry="400x200+100+100"   --form --field="DB Name" --button=gtk-ok:0  )
+    dbName=$(echo $data | awk 'BEGIN {FS="," } { print $1 }')
+      if [[ $dbName == "" ]]
+	then
+	yad --text "you cant create an empty DB" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+	else
+      mkdir ./DBMS/$dbName
+      if [[ $? == 0 ]]
+      then
+            yad --text "Successfully Created" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+      else
+              yad --text "The Name Already Exists" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+      fi
+fi
+Main
+  eval exec $cmd
+}
+function selectDB {
+data=$(yad --title "Select DataBase"  --separator="," --geometry="400x200+100+100"   --form --field="DB Name" --button=gtk-ok:0  )
+dbName=$(echo $data | awk 'BEGIN {FS="," } { print $1 }')
+    cd ./DBMS/$dbName 2>>./.error.log
+    if [[ $? == 0 ]]; then
+      tableSelection
+    else
+      yad --text " Not Found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+    fi
+  }
+  function Main {
+  action=$(yad --geometry="400x100+100+100"  --title "DBMS" --entry  \
+  --text "Welcome" \
+  --text "Options:" \
+      --button="gtk-ok:0" \
+     --button="gtk-close:1" \
+      --entry-text \
+      "Create DataBase" "Select DataBase" )
+  ret=$?
+
+  [[ $ret -eq 1 ]] && exit 0
+
+  if [[ $ret -eq 2 ]]; then
+      gdmflexiserver --startnew &
+      exit 0
+  fi
+  case $action in
+      Create*) createDB  ;;
+      Select*) selectDB ;;
+      *) exit 1 ;;
+  esac
+  eval exec $cmd
+  }
+   Main
