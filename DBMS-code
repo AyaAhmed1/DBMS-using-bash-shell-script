@@ -5,9 +5,9 @@ function createDB {
     data=$(yad --title "Create DataBase" --width 400  --separator="," --geometry="400x200+100+100"   --form --field="DB Name" --button=gtk-ok:0  )
     dbName=$(echo $data | awk 'BEGIN {FS="," } { print $1 }')
       if [[ $dbName == "" ]]
-	then
-	yad --text "you cant create an empty DB" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-	else
+  then
+  yad --text "you cant create an empty DB" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+  else
       mkdir ./DBMS/$dbName
       if [[ $? == 0 ]]
       then
