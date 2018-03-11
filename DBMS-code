@@ -371,17 +371,26 @@ val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
     else # filter by regex  #
     if [[ $val == "" ]]
         then
-      res=$(awk 'BEGIN{FS=","}{if ("$'$fid' ~ $reg") print $"$fid"}' $tableName.csv 2>>./.error.log)
-      if [[ $res == "" ]]
+      counterr=1;
+      flagbg=0;
+        for x in `awk -v nv=$fid 'BEGIN{FS="," ; ORS=" "}{if(NR > 1) {print $nv }}' $tableName.csv`; do
+          ((counterr++));
+          if [ `echo $x | grep -oi $reg` ] ;
+            then 
+            echo $counterr;
+            sed -i ''$counterr'd' $tableName.csv 2>>./.error.log
+            ((counterr--));
+            flagbg=1;
+          fi
+        done
+
+      if [[ $flagbg == 0 ]];
       then
         yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
         tableSelection
       else  
-        for x in `awk 'BEGIN{FS="," ; ORS=" "}{if ("$'$fid' ~ $reg") print NF; }' $tableName.csv`; do
-        sed -i ''$x'd' $tableName.csv 2>>./.error.log
-      done
         yad --text  "Successfully Deleted" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
-         tableSelection
+       tableSelection
       fi
     else
       yad --text  "Enter a value or a regex only to select with" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
@@ -800,15 +809,20 @@ function selectAll {
                --form \
               --field="Enter the table name" \
               --field="Type of file":CB \
-              "" 'CSV!HTML'
+              --field="Select ":CB \
+              "" 'CSV!HTML' 'ALL!according to a condition'
               )
 
     tableName=$(echo $many | awk 'BEGIN {FS="," } { print $1 }')
     filetype=$(echo $many | awk 'BEGIN {FS="," } { print $2 }')
+    selectiontype=$(echo $many | awk 'BEGIN {FS="," } { print $3 }')
     if [[ ($tableName == "") || ($filetype == "") ]];
       then
       yad --text "Please choose the table name and the file type " --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+      tableSelection
     else
+      if [[ $selectiontype == "ALL" ]];
+        then
     if [[ $filetype == "CSV" ]];
       then
       libreoffice $tableName.csv
@@ -834,6 +848,137 @@ function selectAll {
       tableSelection
     fi
     fi
+  else
+
+options=$(yad --separator="," --geometry="400x200+100+100"  --title="Delete from Table" \
+  --button=gtk-ok:0 \
+   --form \
+  --field="Enter Condition column name" \
+  --field="Enter Value for the condition" \
+  --field="enter a regex"
+  )
+field=$(echo $options | awk 'BEGIN {FS="," } { print $1 }')
+reg=$(echo $options | awk 'BEGIN {FS="," } { print $3 }')
+val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
+  fid=$(awk 'BEGIN{FS=","}{if(NR==1){for(i=1;i<=NF;i++){if($i=="'$field'") print i}}}' $tableName.csv)
+  if [[ $fid == "" ]]
+  then
+    yad --text  "Field not found" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+    tableSelection
+  else
+    if [[ $reg == "" ]] #filter by value only 
+      then 
+
+      if [[ $val == "" ]]
+        then
+        yad --text  "Enter a value or a regex to select with" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+    tableSelection
+      else
+      res=$(awk 'BEGIN{FS=","}{if ($'$fid'=="'$val'") print $'$fid'}' $tableName.csv 2>>./.error.log)
+      if [[ $res == "" ]]
+      then
+        yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+        tableSelection
+      else
+        NRR=$(awk 'BEGIN{FS=","}{if ($'$fid'=="'$val'") print NR}' $tableName.csv 2>>./.error.log)
+        if [[ $filetype == "CSV" ]];
+      then
+
+      if [[ -f result.csv ]];
+        then 
+        rm -rf result.csv
+      fi
+        awk -v x=$x '{if (NR == 1) {print $0}}' $tableName.csv >> result.csv
+        for x in $NRR;  do
+        awk -v x=$x '{if (NR == x) {print $0}}' $tableName.csv >> result.csv
+      done
+      libreoffice result.csv
+      tableSelection
+    else
+
+      if [[ -f result.html ]];
+        then 
+        rm -rf result.html
+      fi
+      echo "<html>" >>result.html
+      echo "<body>" >>result.html
+      echo "<table border solid black 1px>" >>result.html
+       awk 'BEGIN {FS="," } {if (NR == 1) {print "<tr>"; for(i=1;i<=NF;i++) print "<td>" $i "</td>"; print "</tr>" }}' $tableName.csv >>result.html
+       for x in $NRR;  do
+      awk -v x=$x 'BEGIN {FS="," } {if (NR == x) {print "<tr>"; for(i=1;i<=NF;i++) print "<td>" $i "</td>"; print "</tr>" }}' $tableName.csv  >>result.html
+       done
+      echo "</table>" >>result.html
+      echo "</body>" >>result.html
+      echo "</html>" >>result.html
+      xdg-open result.html 
+      tableSelection
+    fi
+      fi
+      fi
+    else # filter by regex  #
+
+    if [[ $val == "" ]]
+        then
+      counterr=1;
+      flagbg=0;
+      if [[ -f result.csv ]];
+        then 
+        rm -rf result.csv
+        awk '{if (NR == 1) {print $0}}' $tableName.csv >> result.csv
+      fi
+      if [[ -f result.html ]];
+        then 
+        rm -rf result.html
+         echo "<html>" >>result.html
+      echo "<body>" >>result.html
+      echo "<table border solid black 1px>" >>result.html
+       awk 'BEGIN {FS="," } {if (NR == 1) {print "<tr>"; for(i=1;i<=NF;i++) print "<td>" $i "</td>"; print "</tr>" }}' $tableName.csv >>result.html
+     
+      fi
+
+        for x in `awk -v nv=$fid 'BEGIN{FS="," ; ORS=" "}{if(NR > 1) {print $nv }}' $tableName.csv`; do
+          ((counterr++));
+          if [ `echo $x | grep -oi $reg` ] ;
+            then 
+            echo $counterr;
+            if [[ $filetype == "CSV" ]];
+      then
+        awk -v xx=$counterr '{if (NR == xx) {print $0}}' $tableName.csv >> result.csv
+    else
+      awk -v xx=$counterr 'BEGIN {FS="," } {if (NR == xx) {print "<tr>"; for(i=1;i<=NF;i++) print "<td>" $i "</td>"; print "</tr>" }}' $tableName.csv  >>result.html
+    fi
+            flagbg=1;
+          fi
+        done
+
+      if [[ $flagbg == 0 ]];
+      then
+        yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+        tableSelection
+      else  
+        if [[ $filetype == "CSV" ]];
+        then 
+        libreoffice result.csv
+      tableSelection
+      else
+         echo "</table>" >>result.html
+      echo "</body>" >>result.html
+      echo "</html>" >>result.html
+        xdg-open result.html 
+      tableSelection
+        fi
+      fi
+
+    else
+      yad --text  "Enter a value or a regex only to select with" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
+    tableSelection
+      fi
+    fi
+  fi
+
+
+
+  fi
   fi
 }
 
@@ -842,7 +987,7 @@ function tableSelection {
       --button="gtk-ok:0" \
      --button="gtk-close:1" \
       --entry-text \
-      "Create table" "Insert into table" "Select all from table"  "Delete From Table" "Update table" "Alter Table" "Sort Table" "Display Table Description" "Drop Table" "Main Menu" "Exit")
+      "Create table" "Insert into table" "Select from table"  "Delete From Table" "Update table" "Alter Table" "Sort Table" "Display Table Description" "Drop Table" "Main Menu" "Exit")
       ret=$?
       [[ $ret -eq 1 ]] && exit 0
       if [[ $ret -eq 2 ]]; then
@@ -891,3 +1036,4 @@ function Main {
   eval exec $cmd
   }
    Main
+#deleteFromTable
