@@ -1,5 +1,0 @@
-Field,Type,key,unique,null,default
-name,String,normal,Yes,Yes,
-aya,Integer,normal,Yes,Yes,
-,,normal,,,
-,Integer,normal,Yes,Yes,

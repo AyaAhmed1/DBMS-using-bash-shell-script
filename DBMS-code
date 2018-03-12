@@ -152,6 +152,120 @@ if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
 fi
 }
 
+
+function validateinput() {
+  i=$1;
+  colsNum=$2;
+  $colName=$3;
+  $colType=$4;
+  $colKey=$5;
+  $colUnique=$6;
+  $colNull=$7;
+  $coldef=$8;
+  sep=","
+  rSep="\n"
+  input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
+  --button=gtk-ok:0 \
+   --form \
+  --field="Enter $colName $colType"
+  )
+  data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+  # Validate Input
+  if [[ $colType == "Integer" ]]; then
+    while ! [[ $data =~ ^[0-9]*$ ]]; do
+      yad --text "invalid input" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+      validateinput $i $colsNum
+    done
+  fi
+  if [[ $colType == "String" ]]; then
+    while ! [[ $data =~ ^[a-zA-Z]*$ ]]; do
+      yad --text "invalid input" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+      validateinput $i $colsNum
+    done
+  fi
+
+ if [[ $colKey == "PK" ]]; then
+   if [[ $colType == "Integer" ]]; then
+     while [[ true ]]; do
+       if [[ $data =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$i'-1))}' $tableName.csv`]$ ]]; then
+         yad --text "invalid input for PrimaryKey" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+       else
+         break;
+       fi
+       validateinput $i $colsNum
+     done
+fi
+  if [[ $colType == "String" ]]; then
+while [[ true ]]; do
+       if [[ "$data" =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print "$(('$i'-1))" }' $tableName.csv`]$ ]]; then
+         yad --text "invalid input for PrimaryKey" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+       else
+         break;
+       fi
+       validateinput $i $colsNum
+     done
+   fi
+ fi
+
+
+if [[ $colUnique == "Yes" ]]; then
+if [[ $colType == "Integer" ]]; then
+while [[ true ]]; do
+       if [[ $data =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$i'-1))}' $tableName.csv`]$ ]]; then
+         yad --text "Not unique" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+       else
+         break;
+       fi
+       validateinput $i $colsNum
+     done
+fi
+  if [[ $colType == "String" ]]; then
+ while [[ true ]]; do
+  flagg=0;
+for eachword in `awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$i'-1))}' $tableName.csv`; do
+ if [[ "$data" == "$eachword" ]]; then
+    yad --text "Not unique" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+    flagg=1;
+  fi
+done
+  if [[ $flagg == 1 ]]; then
+  validateinput $i $colsNum
+  else
+  break;
+   fi
+done
+fi
+fi
+
+if [[ $colNull == "No" ]]; then
+while [[ true ]]; do
+  if [[ $data =~ ^$ ]]; then
+  yad --text "this field doesn't accept null values" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+  else
+    break;
+  fi
+  validateinput $i $colsNum
+done
+else
+while [[ true ]]; do
+  if [[ $data =~ ^$ ]]; then
+   data=$coldef
+ yad --text "this field  accept null values then the default value will be used" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+    break;
+  else
+    break;
+  fi
+done
+fi
+  if [[ $i == $colsNum ]]; then
+    row=$row$data$rSep
+    echo $row
+  else
+    row=$row$data$sep
+    echo $row
+  fi
+}
+
 function insert {
   select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Create Table" --text="Please enter table stracture:" \
     --button=gtk-ok:0 \
@@ -175,139 +289,9 @@ sep=","
    colNull=$( awk 'BEGIN{FS=","}{if(NR=='$i') print $5}' .$tableName)
    coldef=$( awk 'BEGIN{FS=","}{if(NR=='$i') print $6}' .$tableName)
 
-input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
-  --button=gtk-ok:0 \
-   --form \
-  --field="Enter $colName $colType"
-  )
-data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-  # Validate Input
-  if [[ $colType == "Integer" ]]; then
-    while ! [[ $data =~ ^[0-9]*$ ]]; do
-      yad --text "invalid input" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-      input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
-        --button=gtk-ok:0 \
-         --form \
-        --field="Enter $colName $colType"
-            )
-    data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-    done
-  fi
-  if [[ $colType == "String" ]]; then
-    while ! [[ $data =~ ^[a-zA-Z]*$ ]]; do
-      yad --text "invalid input" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-      input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
-        --button=gtk-ok:0 \
-         --form \
-        --field="Enter $colName $colType"
-            )
-    data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-    done
-  fi
+   validateinput $i $colsNum $colName $colType $colKey $colUnique $colNull $coldef
+   echo $row
 
- if [[ $colKey == "PK" ]]; then
-   if [[ $colType == "Integer" ]]; then
-     while [[ true ]]; do
-       if [[ $data =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$i'-1))}' $tableName.csv`]$ ]]; then
-         yad --text "invalid input for PrimaryKey" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-       else
-         break;
-       fi
-       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter $colName $colType"
-             )
-     data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-     done
-fi
-  if [[ $colType == "String" ]]; then
-while [[ true ]]; do
-       if [[ "$data" =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print "$(('$i'-1))" }' $tableName.csv`]$ ]]; then
-         yad --text "invalid input for PrimaryKey" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-       else
-         break;
-       fi
-       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter $colName $colType"
-             )
-     data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-     done
-   fi
- fi
-
-
-if [[ $colUnique == "Yes" ]]; then
-if [[ $colType == "Integer" ]]; then
-while [[ true ]]; do
-       if [[ $data =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$i'-1))}' $tableName.csv`]$ ]]; then
-         yad --text "Not unique" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-       else
-         break;
-       fi
-       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter $colName $colType"
-             )
-     data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-     done
-fi
-  if [[ $colType == "String" ]]; then
- while [[ true ]]; do
-  flagg=0;
-for eachword in `awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$i'-1))}' $tableName.csv`; do
- if [[ "$data" == "$eachword" ]]; then
-    yad --text "Not unique" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-    flagg=1;
-  fi
-done
-  if [[ $flagg == 1 ]]; then
-  input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter $colName $colType"
-             )
-     data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-  else
-  break;
-   fi
-done
-fi
-fi
-
-if [[ $colNull == "No" ]]; then
-while [[ true ]]; do
-  if [[ $data =~ ^$ ]]; then
-  yad --text "this field doesn't accept null values" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-  else
-    break;
-  fi
-  input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter $colName $colType"
-             )
-     data=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-done
-else
-while [[ true ]]; do
-  if [[ $data =~ ^$ ]]; then
-   data=$coldef
- yad --text "this field  accept null values then the default value will be used" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-    break;
-  else
-    break;
-  fi
-done
-fi
-  if [[ $i == $colsNum ]]; then
-    row=$row$data$rSep
-  else
-    row=$row$data$sep
-  fi
 done
 echo -e $row"\c" >> $tableName.csv
 if [[ $? == 0 ]]
@@ -459,10 +443,6 @@ function sortTable {
   libreoffice result.csv
 fi
         ;;
-
-#<<<<<<< HEAD
-
-#=======
       Exit*) exit 1  ;;
       *) exit 1 ;;
   esac
@@ -760,7 +740,147 @@ yad --text  "cant delete primary key" --geometry="400x100+100+100" --button=gtk-
 fi
 fi
 }
+function validateUpdate() {
+  
+  
+  $colName=$1;
+  $colType=$2;
+  $colKey=$3;
+  $colUnique=$4;
+  $colNull=$5;
+  $coldef=$6;
+  sep=","
+  rSep="\n"
+  input=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert $colName" \
+  --button=gtk-ok:0 \
+   --form \
+  --field="Enter $colName $colType"
+  )
+  newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+  if [[ $colType == "Integer" ]]; then
+    while ! [[ $newValue =~ ^[0-9]*$ ]]; do
+      yad --text "invalid data type" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+      input=$(yad --separator="," --geometry="400x200+100+100"  --title="update $colName" \
+        --button=gtk-ok:0 \
+         --form \
+        --field="Enter new value in $colName $colType"
+            )
+    newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+    validateUpdate 
+    done
+  fi
+  if [[ $colType == "String" ]]; then
+    while ! [[ $newValue =~ ^[a-zA-Z]*$ ]]; do
+      yad --text "invalid data type " --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+      input=$(yad --separator="," --geometry="400x200+100+100"  --title="update $colName" \
+        --button=gtk-ok:0 \
+         --form \
+        --field="Enter new value in $colName $colType"
+            )
+    newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+    done
+  fi
 
+ if [[ $colKey == "PK" ]]; then
+   if [[ $colType == "Integer" ]]; then
+     while [[ true ]]; do
+       if [[ $newValue =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$x'-1))}' $tableName.csv`]$ ]]; then
+         yad --text "invalid input for PrimaryKey" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+       else
+         break;
+       fi
+       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
+         --button=gtk-ok:0 \
+          --form \
+         --field="Enter new value in $colName $colType"
+             )
+     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+     done
+fi
+  if [[ $colType == "String" ]]; then
+while [[ true ]]; do
+       if [[ "$newValue" =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print "$(('$x'-1))" }' $tableName.csv`]$ ]]; then
+         yad --text "invalid input for PrimaryKey" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+       else
+         break;
+       fi
+       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
+         --button=gtk-ok:0 \
+          --form \
+         --field="Enter new value in $colName $colType"
+             )
+     newValue=$(echo $input  | awk 'BEGIN {FS="," } { print $1 }')
+     done
+   fi
+ fi
+
+
+if [[ $colUnique == "Yes" ]]; then
+if [[ $colType == "Integer" ]]; then
+while [[ true ]]; do
+       if [[ $newValue =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$x'-1))}' $tableName.csv`]$ ]]; then
+         yad --text "Not unique" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+       else
+         break;
+       fi
+       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
+         --button=gtk-ok:0 \
+          --form \
+         --field="Enter new value in $colName $colType"
+             )
+     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+     done
+fi
+  if [[ $colType == "String" ]]; then
+ while [[ true ]]; do
+  flagg=0;
+for eachword in `awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$x'-1))}' $tableName.csv`; do
+ if [[ "$newValue" == "$eachword" ]]; then
+    yad --text "Not unique" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+    flagg=1;
+  fi
+done
+  if [[ $flagg == 1 ]]; then
+  input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
+         --button=gtk-ok:0 \
+          --form \
+         --field="Enter new value in $colName $colType"
+             )
+     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+  else
+  break;
+   fi
+done
+fi
+fi
+
+if [[ $colNull == "No" ]]; then
+while [[ true ]]; do
+  if [[ $newValue =~ ^$ ]]; then
+  yad --text "this field doesn't accept null values" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+  else
+    break;
+  fi
+  input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
+         --button=gtk-ok:0 \
+          --form \
+         --field="Enter new value in $colName $colType"
+             )
+     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
+done
+else
+while [[ true ]]; do
+  if [[ $newValue =~ ^$ ]]; then
+   newValue=$coldef
+ yad --text "this field  accept null values then the default value will be used" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
+    break;
+  else
+    break;
+  fi
+done
+fi
+ echo $newValue
+}
 function updateTable {
   select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Update Table" \
     --button=gtk-ok:0 \
@@ -816,7 +936,6 @@ if ! [[ -f $tableName.csv ]]; then
 
       newValue=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
         NR=$(awk 'BEGIN{FS=","}{if ($'$fid' == "'$val'") print NR}' $tableName.csv 2>>./.error.log)
-#####
     x=$setFid
     (( x += 1))
    colName=$(awk 'BEGIN{FS=","}{ if(NR=="'$x'") print $1}' .$tableName)
@@ -826,135 +945,8 @@ if ! [[ -f $tableName.csv ]]; then
    colNull=$( awk 'BEGIN{FS=","}{if(NR=="'$x'") print $5}' .$tableName)
    coldef=$( awk 'BEGIN{FS=","}{if(NR=="'$x'") print $6}' .$tableName)
 
-
+   newValue=$(validateUpdate $colName $colType $colKey $colUnique $colNull $coldef)
   # Validate Input
-  if [[ $colType == "Integer" ]]; then
-    while ! [[ $newValue =~ ^[0-9]*$ ]]; do
-      yad --text "invalid data type" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-      input=$(yad --separator="," --geometry="400x200+100+100"  --title="update $colName" \
-        --button=gtk-ok:0 \
-         --form \
-        --field="Enter new value in $colName $colType"
-            )
-    newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-    done
-  fi
-  if [[ $colType == "String" ]]; then
-    while ! [[ $newValue =~ ^[a-zA-Z]*$ ]]; do
-      yad --text "invalid data type " --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-      input=$(yad --separator="," --geometry="400x200+100+100"  --title="update $colName" \
-        --button=gtk-ok:0 \
-         --form \
-        --field="Enter new value in $colName $colType"
-            )
-    newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-    done
-  fi
-
- if [[ $colKey == "PK" ]]; then
-   if [[ $colType == "Integer" ]]; then
-     while [[ true ]]; do
-       if [[ $newValue =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$x'-1))}' $tableName.csv`]$ ]]; then
-         yad --text "invalid input for PrimaryKey" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-       else
-         break;
-       fi
-       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter new value in $colName $colType"
-             )
-     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-     done
-fi
-  if [[ $colType == "String" ]]; then
-while [[ true ]]; do
-       if [[ "$newValue" =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print "$(('$x'-1))" }' $tableName.csv`]$ ]]; then
-         yad --text "invalid input for PrimaryKey" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-       else
-         break;
-       fi
-       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter new value in $colName $colType"
-             )
-     newValue=$(echo $input  | awk 'BEGIN {FS="," } { print $1 }')
-     done
-   fi
- fi
-
-
-if [[ $colUnique == "Yes" ]]; then
-if [[ $colType == "Integer" ]]; then
-while [[ true ]]; do
-       if [[ $newValue =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$x'-1))}' $tableName.csv`]$ ]]; then
-         yad --text "Not unique" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-       else
-         break;
-       fi
-       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter new value in $colName $colType"
-             )
-     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-     done
-fi
-  if [[ $colType == "String" ]]; then
- while [[ true ]]; do
-  flagg=0;
-for eachword in `awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$x'-1))}' $tableName.csv`; do
- if [[ "$newValue" == "$eachword" ]]; then
-    yad --text "Not unique" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-    flagg=1;
-  fi
-done
-  if [[ $flagg == 1 ]]; then
-  input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter new value in $colName $colType"
-             )
-     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-  else
-  break;
-   fi
-done
-fi
-fi
-
-if [[ $colNull == "No" ]]; then
-while [[ true ]]; do
-  if [[ $newValue =~ ^$ ]]; then
-  yad --text "this field doesn't accept null values" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-  else
-    break;
-  fi
-  input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter new value in $colName $colType"
-             )
-     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-done
-else
-while [[ true ]]; do
-  if [[ $newValue =~ ^$ ]]; then
-   newValue=$coldef
- yad --text "this field  accept null values then the default value will be used" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-    break;
-  else
-    break;
-  fi
-done
-fi
-  if [[ $x == $colsNum ]]; then
-    row=$row$data$rSep
-  else
-    row=$row$data$sep
-  fi
-####
         for value in $(echo $NR); do
         oldValue=$(awk 'BEGIN{FS=","}{if(NR=='$value'){for(i=1;i<=NF;i++){if(i=='$setFid') print $i}}}' $tableName.csv 2>>./.error.log)
         echo $oldValue
@@ -969,7 +961,6 @@ fi
       else  #filter by regex only
         if [[ $val == "" ]]
         then
-        #echo "kda regex"
          counterr=1;
       flagbg=0;
         for x in `awk -v nv=$fid 'BEGIN{FS="," ; ORS=" "}{if(NR > 1) {print $nv }}' $tableName.csv`; do
@@ -977,7 +968,6 @@ fi
           if [ `echo $x | grep -oi $reg` ] ;
             then 
             echo $counterr;
-            ######################### mn awl hna 7ad5l l rege
 
       setFid=$(awk 'BEGIN{FS=","}{if(NR==1){for(i=1;i<=NF;i++){if($i=="'$setField'") print i}}}' $tableName.csv)
       if [[ $setFid == "" ]]
@@ -987,10 +977,7 @@ fi
       else
 
       newValue=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
-      #newValue=$x;
-        #NR=$(awk 'BEGIN{FS=","}{if ($'$fid' == "'$val'") print NR}' $tableName.csv 2>>./.error.log)
         NR=$counterr
-#####
     x=$setFid
     (( x += 1))
    colName=$(awk 'BEGIN{FS=","}{ if(NR=="'$x'") print $1}' .$tableName)
@@ -1001,149 +988,15 @@ fi
    coldef=$( awk 'BEGIN{FS=","}{if(NR=="'$x'") print $6}' .$tableName)
 
 
-  # Validate Input
-  if [[ $colType == "Integer" ]]; then
-    while ! [[ $newValue =~ ^[0-9]*$ ]]; do
-      yad --text "invalid data type" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-      input=$(yad --separator="," --geometry="400x200+100+100"  --title="update $colName" \
-        --button=gtk-ok:0 \
-         --form \
-        --field="Enter new value in $colName $colType"
-            )
-    newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-    done
-  fi
-  if [[ $colType == "String" ]]; then
-    while ! [[ $newValue =~ ^[a-zA-Z]*$ ]]; do
-      yad --text "invalid data type " --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-      input=$(yad --separator="," --geometry="400x200+100+100"  --title="update $colName" \
-        --button=gtk-ok:0 \
-         --form \
-        --field="Enter new value in $colName $colType"
-            )
-    newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-    done
-  fi
+  newValue=$(validateUpdate $colName $colType $colKey $colUnique $colNull $coldef)
 
- if [[ $colKey == "PK" ]]; then
-   if [[ $colType == "Integer" ]]; then
-     while [[ true ]]; do
-       if [[ $newValue =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$x'-1))}' $tableName.csv`]$ ]]; then
-         yad --text "invalid input for PrimaryKey" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-       else
-         break;
-       fi
-       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter new value in $colName $colType"
-             )
-     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-     done
-fi
-  if [[ $colType == "String" ]]; then
-while [[ true ]]; do
-       if [[ "$newValue" =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print "$(('$x'-1))" }' $tableName.csv`]$ ]]; then
-         yad --text "invalid input for PrimaryKey" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-       else
-         break;
-       fi
-       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter new value in $colName $colType"
-             )
-     newValue=$(echo $input  | awk 'BEGIN {FS="," } { print $1 }')
-     done
-   fi
- fi
-
-
-if [[ $colUnique == "Yes" ]]; then
-if [[ $colType == "Integer" ]]; then
-while [[ true ]]; do
-       if [[ $newValue =~ ^[`awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$x'-1))}' $tableName.csv`]$ ]]; then
-         yad --text "Not unique" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-       else
-         break;
-       fi
-       input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter new value in $colName $colType"
-             )
-     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-     done
-fi
-  if [[ $colType == "String" ]]; then
- while [[ true ]]; do
-  flagg=0;
-for eachword in `awk 'BEGIN{FS="," ; ORS=" "}{if(NR != 1)print $(('$x'-1))}' $tableName.csv`; do
- if [[ "$newValue" == "$eachword" ]]; then
-    yad --text "Not unique" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-    flagg=1;
-  fi
-done
-  if [[ $flagg == 1 ]]; then
-  input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter new value in $colName $colType"
-             )
-     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-  else
-  break;
-   fi
-done
-fi
-fi
-
-if [[ $colNull == "No" ]]; then
-while [[ true ]]; do
-  if [[ $newValue =~ ^$ ]]; then
-  yad --text "this field doesn't accept null values" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-  else
-    break;
-  fi
-  input=$(yad --separator="," --geometry="400x200+100+100"  --title="Update $colName" \
-         --button=gtk-ok:0 \
-          --form \
-         --field="Enter new value in $colName $colType"
-             )
-     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-done
-else
-while [[ true ]]; do
-  if [[ $newValue =~ ^$ ]]; then
-   newValue=$coldef
- yad --text "this field  accept null values then the default value will be used" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
-    break;
-  else
-    break;
-  fi
-done
-fi
-  if [[ $x == $colsNum ]]; then
-    row=$row$data$rSep
-  else
-    row=$row$data$sep
-  fi
-####
         for value in $(echo $NR); do
         oldValue=$(awk 'BEGIN{FS=","}{if(NR=='$value'){for(i=1;i<=NF;i++){if(i=='$setFid') print $i}}}' $tableName.csv 2>>./.error.log)
         echo $oldValue
         sed -i -- ''$value's/'$oldValue'/'$newValue'/g' $tableName.csv 2>>./.error.log
         done
-        #yad --text  "Row updated Successfully" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
-        
-        #tableSelection
 fi
 
-
-
-
-            #sed -i ''$counterr'd' $tableName.csv 2>>./.error.log
-            #((counterr--));
             flagbg=1;
           fi
         done
@@ -1156,17 +1009,11 @@ fi
         yad --text  "Successfully Updated" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
        tableSelection
       fi
-        #echo "kda regex"
         else
       yad --text  "Enter a value or a regex only to select with" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
     tableSelection
       fi
-
       fi
-
-
-
-    
   fi
 }
 
@@ -1342,9 +1189,6 @@ val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
       fi
     fi
   fi
-
-
-
   fi
   fi
 }
@@ -1403,4 +1247,3 @@ function Main {
   eval exec $cmd
   }
    Main
-#deleteFromTable
