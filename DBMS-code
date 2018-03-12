@@ -106,7 +106,7 @@ if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
     defvalue=$(echo $many | awk 'BEGIN {FS="," } { print $5 }')
     fi
  if [[ $colName == '' ]]
-     then 
+     then
       yad --text "column name must have a value" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
   tableSelection
    fi
@@ -147,7 +147,7 @@ if [[ ( $tableName == "" ) || ( $colsNum == "" ) ]]
            yad --text "Error Creating Table" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
            createTable
 
-        
+
          fi
 fi
 }
@@ -267,7 +267,7 @@ fi
 }
 
 function insert {
-  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Create Table" --text="Please enter table stracture:" \
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Insert " --text="Please enter table stracture:" \
     --button=gtk-ok:0 \
      --form \
     --field="Enter Table Name"
@@ -333,8 +333,8 @@ val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
     yad --text  "Field not found" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
     tableSelection
   else
-    if [[ $reg == "" ]] #filter by value only 
-      then 
+    if [[ $reg == "" ]] #filter by value only
+      then
 
       if [[ $val == "" ]]
         then
@@ -362,7 +362,7 @@ val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
         for x in `awk -v nv=$fid 'BEGIN{FS="," ; ORS=" "}{if(NR > 1) {print $nv }}' $tableName.csv`; do
           ((counterr++));
           if [ `echo $x | grep -oi $reg` ] ;
-            then 
+            then
             echo $counterr;
             sed -i ''$counterr'd' $tableName.csv 2>>./.error.log
             ((counterr--));
@@ -374,7 +374,7 @@ val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
       then
         yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
         tableSelection
-      else  
+      else
         yad --text  "Successfully Deleted" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
        tableSelection
       fi
@@ -633,7 +633,7 @@ fi
 }
 
 function addCol {
-  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Delete field" \
+  select_name=$(yad --separator="," --geometry="400x200+100+100"  --title="Add field" \
     --button=gtk-ok:0 \
      --form \
     --field="Enter Table Name"
@@ -643,7 +643,7 @@ if ! [[ -f $tableName.csv ]]; then
  yad --text "Table $tableName isn't existed" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
  tableSelection
  fi
- 
+
  NR=$(awk 'BEGIN{FS=","}{if ($'3' == "'PK'") print NR}' .$tableName 2>>./.error.log)
 
     if [[ ( $NR == "" ) ]]; then
@@ -683,7 +683,7 @@ if ! [[ -f $tableName.csv ]]; then
     defvalue=$(echo $many | awk 'BEGIN {FS="," } { print $5 }')
   fi
    if [[ $colName == '' ]]
-     then 
+     then
       yad --text "column name must have a value" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
   tableSelection
    else
@@ -734,15 +734,14 @@ yad --text  "cant delete primary key" --geometry="400x100+100+100" --button=gtk-
    NR=$(awk 'BEGIN{FS=","}{if ($'1' == "'$field'") print NR}' .$tableName 2>>./.error.log)
    sed -i 's/[^,]*//'$fid'' $tableName.csv 2>>./.error.log
    sed -i ''$NR'd' .$tableName 2>>./.error.log
-   sed -i 's/[^,]*,//' $tableName.csv 2>>./.error.log
  yad --text  "field deleted successfully" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
     tableSelection
 fi
 fi
 }
 function validateUpdate() {
-  
-  
+
+
   $colName=$1;
   $colType=$2;
   $colKey=$3;
@@ -766,7 +765,7 @@ function validateUpdate() {
         --field="Enter new value in $colName $colType"
             )
     newValue=$(echo $input | awk 'BEGIN {FS="," } { print $1 }')
-    validateUpdate 
+    validateUpdate
     done
   fi
   if [[ $colType == "String" ]]; then
@@ -911,9 +910,9 @@ if ! [[ -f $tableName.csv ]]; then
     yad --text  "Field not found" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
      tableSelection
   else
-    
-    if [[ $reg == "" ]] #filter by value only 
-      then 
+
+    if [[ $reg == "" ]] #filter by value only
+      then
       if [[ $val == "" ]]
         then
         yad --text  "Enter a value or a regex to select with" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
@@ -924,7 +923,7 @@ if ! [[ -f $tableName.csv ]]; then
     then
       yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
       tableSelection
-    
+
       else
       setField=$(echo $options | awk 'BEGIN {FS="," } { print $1 }')
       setFid=$(awk 'BEGIN{FS=","}{if(NR==1){for(i=1;i<=NF;i++){if($i=="'$setField'") print i}}}' $tableName.csv)
@@ -953,7 +952,7 @@ if ! [[ -f $tableName.csv ]]; then
         sed -i -- ''$value's/'$oldValue'/'$newValue'/g' $tableName.csv 2>>./.error.log
         done
         yad --text  "Row updated Successfully" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
-        
+
         tableSelection
 fi
     fi
@@ -966,7 +965,7 @@ fi
         for x in `awk -v nv=$fid 'BEGIN{FS="," ; ORS=" "}{if(NR > 1) {print $nv }}' $tableName.csv`; do
           ((counterr++));
           if [ `echo $x | grep -oi $reg` ] ;
-            then 
+            then
             echo $counterr;
 
       setFid=$(awk 'BEGIN{FS=","}{if(NR==1){for(i=1;i<=NF;i++){if($i=="'$setField'") print i}}}' $tableName.csv)
@@ -1005,7 +1004,7 @@ fi
       then
         yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
         tableSelection
-      else  
+      else
         yad --text  "Successfully Updated" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
        tableSelection
       fi
@@ -1043,7 +1042,7 @@ function selectAll {
       tableSelection
     else
       if [[ -f $tableName.html ]]
-        then 
+        then
         rm -rf $tableName.html
         echo "<html>" >>$tableName.html
       echo "<body>" >>$tableName.html
@@ -1080,8 +1079,8 @@ val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
     yad --text  "Field not found" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
     tableSelection
   else
-    if [[ $reg == "" ]] #filter by value only 
-      then 
+    if [[ $reg == "" ]] #filter by value only
+      then
 
       if [[ $val == "" ]]
         then
@@ -1099,7 +1098,7 @@ val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
       then
 
       if [[ -f result.csv ]];
-        then 
+        then
         rm -rf result.csv
       fi
         awk -v x=$x '{if (NR == 1) {print $0}}' $tableName.csv >> result.csv
@@ -1111,7 +1110,7 @@ val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
     else
 
       if [[ -f result.html ]];
-        then 
+        then
         rm -rf result.html
       fi
       echo "<html>" >>result.html
@@ -1124,7 +1123,7 @@ val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
       echo "</table>" >>result.html
       echo "</body>" >>result.html
       echo "</html>" >>result.html
-      xdg-open result.html 
+      xdg-open result.html
       tableSelection
     fi
       fi
@@ -1136,24 +1135,24 @@ val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
       counterr=1;
       flagbg=0;
       if [[ -f result.csv ]];
-        then 
+        then
         rm -rf result.csv
         awk '{if (NR == 1) {print $0}}' $tableName.csv >> result.csv
       fi
       if [[ -f result.html ]];
-        then 
+        then
         rm -rf result.html
          echo "<html>" >>result.html
       echo "<body>" >>result.html
       echo "<table border solid black 1px>" >>result.html
        awk 'BEGIN {FS="," } {if (NR == 1) {print "<tr>"; for(i=1;i<=NF;i++) print "<td>" $i "</td>"; print "</tr>" }}' $tableName.csv >>result.html
-     
+
       fi
 
         for x in `awk -v nv=$fid 'BEGIN{FS="," ; ORS=" "}{if(NR > 1) {print $nv }}' $tableName.csv`; do
           ((counterr++));
           if [ `echo $x | grep -oi $reg` ] ;
-            then 
+            then
             echo $counterr;
             if [[ $filetype == "CSV" ]];
       then
@@ -1169,16 +1168,16 @@ val=$(echo $options | awk 'BEGIN {FS="," } { print $2 }')
       then
         yad --text "Value not found" --geometry="400x200+100+100" --button=gtk-ok:0 --title "Message"
         tableSelection
-      else  
+      else
         if [[ $filetype == "CSV" ]];
-        then 
+        then
         libreoffice result.csv
       tableSelection
       else
          echo "</table>" >>result.html
       echo "</body>" >>result.html
       echo "</html>" >>result.html
-        xdg-open result.html 
+        xdg-open result.html
       tableSelection
         fi
       fi
