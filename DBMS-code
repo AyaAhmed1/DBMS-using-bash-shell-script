@@ -734,6 +734,8 @@ yad --text  "cant delete primary key" --geometry="400x100+100+100" --button=gtk-
    NR=$(awk 'BEGIN{FS=","}{if ($'1' == "'$field'") print NR}' .$tableName 2>>./.error.log)
    sed -i 's/[^,]*//'$fid'' $tableName.csv 2>>./.error.log
    sed -i ''$NR'd' .$tableName 2>>./.error.log
+   sed -i 's/,,/,/g' $tableName.csv 2>>./.error.log   
+
  yad --text  "field deleted successfully" --geometry="400x100+100+100" --button=gtk-ok:0 --title "Message"
     tableSelection
 fi
